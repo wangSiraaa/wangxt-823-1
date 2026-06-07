@@ -1,5 +1,5 @@
 import type { ShiftAssignment, ValidationError } from '../types';
-import { counselors, hotlines, shiftTypes } from '../data/fixtures';
+import { counselors, hotlines, shiftTypes, qualifications } from '../data/fixtures';
 
 export function checkCounselorQualification(
   counselorId: string,
@@ -11,10 +11,20 @@ export function checkCounselorQualification(
   if (!counselor || !hotline) return null;
   
   if (!counselor.qualifications.includes(hotline.requiredQualification)) {
+    const requiredQual = qualifications.find(q => q.id === hotline.requiredQualification);
+    const counselorQualNames = counselor.qualifications
+      .map(qId => qualifications.find(q => q.id === qId)?.name)
+      .filter(Boolean);
+    
     return {
       type: 'qualification',
       message: `${counselor.name} 不具备 ${hotline.name} 所需的资质`,
+      detail: `需要「${requiredQual?.name}」资质，当前仅具备：${counselorQualNames.length > 0 ? counselorQualNames.join('、') : '无'}`,
       counselorId,
+      counselorName: counselor.name,
+      requiredQualification: hotline.requiredQualification,
+      requiredQualificationName: requiredQual?.name,
+      counselorQualifications: counselor.qualifications,
     };
   }
   
@@ -33,6 +43,7 @@ export function checkNightShiftRequirement(
     return {
       type: 'night_shift',
       message: `夜班必须安排 ${shiftType.requiredCounselors} 人值守，当前仅 ${currentCounselorIds.length} 人`,
+      detail: `请补充 ${shiftType.requiredCounselors - currentCounselorIds.length} 名咨询师`,
     };
   }
   
@@ -60,6 +71,7 @@ export function checkCounselorConflict(
     return {
       type: 'conflict',
       message: `${counselor?.name || '该咨询师'} 已在同一时段被安排到 ${hotline?.name || '其他热线'}`,
+      detail: `无法在同一时段重复排班`,
       counselorId,
     };
   }
@@ -125,6 +137,7 @@ export function canAddCounselorToShift(
       error: {
         type: 'conflict',
         message: `该班次已达到最大人数限制 (${shiftType.requiredCounselors}人)`,
+        detail: `白班仅需 ${shiftType.requiredCounselors} 人值守`,
       },
     };
   }

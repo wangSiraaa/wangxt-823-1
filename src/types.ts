@@ -49,6 +49,11 @@ export interface Qualification {
 export interface ValidationError {
   type: 'qualification' | 'night_shift' | 'conflict';
   message: string;
+  detail?: string;
   counselorId?: string;
+  counselorName?: string;
+  requiredQualification?: string;
+  requiredQualificationName?: string;
+  counselorQualifications?: string[];
   shiftId?: string;
 }

@@ -14,7 +14,7 @@ interface ShiftSlotProps {
 }
 
 function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }: ShiftSlotProps) {
-  const { canEditSchedule } = useApp();
+  const { canEditSchedule, showError } = useApp();
   const shiftType = shiftTypes.find(s => s.id === shiftTypeId);
   const hotline = hotlines.find(h => h.id === hotlineId);
   const assignedCounselors = assignment 
@@ -23,8 +23,11 @@ function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }
 
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: 'COUNSELOR',
-    canDrop: (item: { id: string; type: string }) => {
+    canDrop: () => {
       if (!canEditSchedule()) return false;
+      return true;
+    },
+    drop: (item: { id: string; type: string }) => {
       const result = canAddCounselorToShift(
         item.id,
         date,
@@ -33,21 +36,22 @@ function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }
         assignment?.counselorIds || [],
         []
       );
-      return result.valid;
-    },
-    drop: (item: { id: string; type: string }) => {
+      if (!result.valid && result.error) {
+        showError(result.error.message);
+        return;
+      }
       onDrop(item.id);
     },
     collect: (monitor) => ({
       isOver: monitor.isOver(),
       canDrop: monitor.canDrop(),
     }),
-  }), [date, shiftTypeId, hotlineId, assignment, canEditSchedule]);
+  }), [date, shiftTypeId, hotlineId, assignment, canEditSchedule, showError]);
 
   const getBorderStyle = () => {
-    if (isOver && canDrop) return 'border-green-400 bg-green-50';
+    if (isOver && canDrop) return 'border-blue-400 bg-blue-50';
     if (isOver && !canDrop) return 'border-red-400 bg-red-50';
-    if (canDrop) return 'border-blue-300 border-dashed';
+    if (canDrop && canEditSchedule()) return 'border-blue-300 border-dashed';
     return 'border-gray-200';
   };
 
@@ -78,12 +82,21 @@ function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }
       </div>
       
       <div className="space-y-1">
-        {assignedCounselors.map(c => (
-          <div key={c.id} className="flex items-center gap-1 text-sm bg-gray-100 rounded-lg px-2 py-1">
-            <span>{c.avatar}</span>
-            <span className="truncate">{c.name}</span>
-          </div>
-        ))}
+        {assignedCounselors.map(c => {
+          const hasQual = c.qualifications.includes(hotline?.requiredQualification || '');
+          return (
+            <div 
+              key={c.id} 
+              className={`flex items-center gap-1 text-sm rounded-lg px-2 py-1 ${
+                hasQual ? 'bg-gray-100' : 'bg-red-100 border border-red-300'
+              }`}
+            >
+              <span>{c.avatar}</span>
+              <span className={`truncate ${hasQual ? '' : 'text-red-700'}`}>{c.name}</span>
+              {!hasQual && <span className="text-red-500" title="资质不匹配">⚠️</span>}
+            </div>
+          );
+        })}
         {assignedCounselors.length === 0 && (
           <p className="text-xs text-gray-400 text-center py-2">
             {canEditSchedule() ? '拖拽排班' : '暂无排班'}
@@ -125,9 +138,7 @@ export function DutyRoster({ onSlotClick }: DutyRosterProps) {
     }
     
     if (assignmentId) {
-      const success = addCounselorToAssignment(assignmentId, counselorId);
-      if (!success && !assignment) {
-      }
+      addCounselorToAssignment(assignmentId, counselorId);
     }
   };
 

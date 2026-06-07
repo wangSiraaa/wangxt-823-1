@@ -6,7 +6,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
-  const { canEditSchedule, canManageUsers, currentUser } = useApp();
+  const { canEditSchedule, canManageUsers, canViewAllSchedules, currentUser } = useApp();
 
   const allMenuItems = [
     {

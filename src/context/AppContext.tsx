@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import type { User, ShiftAssignment, ValidationError, UserRole } from '../types';
-import { initialAssignments } from '../data/fixtures';
+import { users, initialAssignments } from '../data/fixtures';
 import { validateAssignment } from '../utils/validation';
 
 interface AppState {

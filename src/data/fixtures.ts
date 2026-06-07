@@ -159,6 +159,7 @@ export const initialAssignments: ShiftAssignment[] = [
     shiftTypeId: 's1',
     hotlineId: 'h1',
     counselorIds: ['c1'],
+    status: 'normal',
   },
   {
     id: 'a2',
@@ -166,6 +167,7 @@ export const initialAssignments: ShiftAssignment[] = [
     shiftTypeId: 's2',
     hotlineId: 'h2',
     counselorIds: ['c2'],
+    status: 'normal',
   },
   {
     id: 'a3',
@@ -173,6 +175,7 @@ export const initialAssignments: ShiftAssignment[] = [
     shiftTypeId: 's3',
     hotlineId: 'h1',
     counselorIds: ['c4', 'c7'],
+    status: 'normal',
   },
   {
     id: 'a4',
@@ -180,6 +183,7 @@ export const initialAssignments: ShiftAssignment[] = [
     shiftTypeId: 's1',
     hotlineId: 'h3',
     counselorIds: ['c3'],
+    status: 'normal',
   },
   {
     id: 'a5',
@@ -187,6 +191,39 @@ export const initialAssignments: ShiftAssignment[] = [
     shiftTypeId: 's3',
     hotlineId: 'h4',
     counselorIds: ['c5', 'c8'],
+    status: 'normal',
+  },
+  {
+    id: 'a6',
+    date: formatDate(addDays(today, 2)),
+    shiftTypeId: 's2',
+    hotlineId: 'h2',
+    counselorIds: ['c1'],
+    status: 'abnormal',
+  },
+  {
+    id: 'a7',
+    date: formatDate(addDays(today, 2)),
+    shiftTypeId: 's1',
+    hotlineId: 'h3',
+    counselorIds: ['c6'],
+    status: 'abnormal',
+  },
+  {
+    id: 'a8',
+    date: formatDate(addDays(today, 3)),
+    shiftTypeId: 's2',
+    hotlineId: 'h4',
+    counselorIds: ['c5', 'c7'],
+    status: 'resolved',
+  },
+  {
+    id: 'a9',
+    date: formatDate(addDays(today, -1)),
+    shiftTypeId: 's3',
+    hotlineId: 'h2',
+    counselorIds: ['c2', 'c4'],
+    status: 'resolved',
   },
 ];
 

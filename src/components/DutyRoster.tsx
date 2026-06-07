@@ -2,7 +2,13 @@ import { useDrop } from 'react-dnd';
 import { useApp } from '../context/AppContext';
 import { shiftTypes, hotlines, counselors, getWeekDates } from '../data/fixtures';
 import { canAddCounselorToShift } from '../utils/validation';
-import type { ShiftAssignment } from '../types';
+import type { ShiftAssignment, ShiftStatus } from '../types';
+
+const statusConfig: Record<ShiftStatus, { label: string; color: string; bgColor: string }> = {
+  normal: { label: '正常', color: 'text-green-700', bgColor: 'bg-green-100' },
+  abnormal: { label: '异常', color: 'text-red-700', bgColor: 'bg-red-100' },
+  resolved: { label: '已处理', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+};
 
 interface ShiftSlotProps {
   date: string;
@@ -20,6 +26,8 @@ function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }
   const assignedCounselors = assignment 
     ? counselors.filter(c => assignment.counselorIds.includes(c.id))
     : [];
+  const status = assignment?.status || 'normal';
+  const statusInfo = statusConfig[status];
 
   const [{ isOver, canDrop }, drop] = useDrop(() => ({
     accept: 'COUNSELOR',
@@ -37,7 +45,8 @@ function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }
         []
       );
       if (!result.valid && result.error) {
-        showError(result.error.message);
+        const detail = result.error.detail ? ` - ${result.error.detail}` : '';
+        showError(result.error.message + detail);
         return;
       }
       onDrop(item.id);
@@ -49,6 +58,8 @@ function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }
   }), [date, shiftTypeId, hotlineId, assignment, canEditSchedule, showError]);
 
   const getBorderStyle = () => {
+    if (status === 'abnormal') return 'border-red-400 border-2';
+    if (status === 'resolved') return 'border-blue-400 border-2';
     if (isOver && canDrop) return 'border-blue-400 bg-blue-50';
     if (isOver && !canDrop) return 'border-red-400 bg-red-50';
     if (canDrop && canEditSchedule()) return 'border-blue-300 border-dashed';
@@ -59,13 +70,14 @@ function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }
     <div
       ref={drop}
       onClick={onClick}
-      className={`min-h-20 p-2 rounded-xl border-2 cursor-pointer transition-all duration-200 ${getBorderStyle()} ${
+      className={`min-h-24 p-2 rounded-xl border-2 cursor-pointer transition-all duration-200 ${getBorderStyle()} ${
         assignment?.counselorIds.length ? 'bg-white' : 'bg-gray-50'
       } hover:shadow-md`}
       data-testid={`shift-slot-${date}-${shiftTypeId}-${hotlineId}`}
       data-date={date}
       data-shift-type={shiftTypeId}
       data-hotline={hotlineId}
+      data-status={status}
     >
       <div className="flex items-center justify-between mb-1">
         <span 
@@ -73,6 +85,9 @@ function ShiftSlot({ date, shiftTypeId, hotlineId, assignment, onDrop, onClick }
           style={{ backgroundColor: hotline?.color }}
         >
           {hotline?.name}
+        </span>
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
+          {statusInfo.label}
         </span>
         {shiftType?.isNightShift && (
           <span className="text-xs px-2 py-0.5 bg-red-100 text-red-600 rounded-full">
@@ -118,7 +133,7 @@ interface DutyRosterProps {
 }
 
 export function DutyRoster({ onSlotClick }: DutyRosterProps) {
-  const { selectedDate, assignments, addCounselorToAssignment, createAssignment, canEditSchedule } = useApp();
+  const { selectedDate, assignments, addCounselorToAssignment, createAssignment, canEditSchedule, savePreferences } = useApp();
   const weekDates = getWeekDates();
 
   const getAssignment = (date: string, shiftTypeId: string, hotlineId: string) => {
@@ -144,6 +159,7 @@ export function DutyRoster({ onSlotClick }: DutyRosterProps) {
 
   const handleSlotClick = (date: string, shiftTypeId: string, hotlineId: string) => {
     const assignment = getAssignment(date, shiftTypeId, hotlineId);
+    savePreferences({ selectedDate: date });
     if (assignment) {
       onSlotClick(assignment, date, shiftTypeId, hotlineId);
     } else if (canEditSchedule()) {
@@ -154,6 +170,7 @@ export function DutyRoster({ onSlotClick }: DutyRosterProps) {
         shiftTypeId,
         hotlineId,
         counselorIds: [],
+        status: 'normal' as const,
       };
       onSlotClick(newAssignment, date, shiftTypeId, hotlineId);
     }
@@ -173,23 +190,34 @@ export function DutyRoster({ onSlotClick }: DutyRosterProps) {
     <div className="bg-white rounded-2xl shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-800">📅 本周值班表</h2>
-        <div className="flex items-center gap-2">
-          {weekDates.map(date => {
-            const { day, weekDay, isToday } = formatDateLabel(date);
-            return (
-              <div
-                key={date}
-                className={`text-center px-3 py-2 rounded-xl cursor-pointer transition-all ${
-                  isToday 
-                    ? 'bg-blue-500 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <p className="text-lg font-bold">{day}</p>
-                <p className="text-xs">{weekDay}</p>
-              </div>
-            );
-          })}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="w-3 h-3 rounded-full bg-green-400"></span>
+            <span className="text-gray-600">正常</span>
+            <span className="w-3 h-3 rounded-full bg-red-400 ml-2"></span>
+            <span className="text-gray-600">异常</span>
+            <span className="w-3 h-3 rounded-full bg-blue-400 ml-2"></span>
+            <span className="text-gray-600">已处理</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {weekDates.map(date => {
+              const { day, weekDay, isToday } = formatDateLabel(date);
+              return (
+                <div
+                  key={date}
+                  onClick={() => savePreferences({ selectedDate: date })}
+                  className={`text-center px-3 py-2 rounded-xl cursor-pointer transition-all ${
+                    isToday 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  <p className="text-lg font-bold">{day}</p>
+                  <p className="text-xs">{weekDay}</p>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 

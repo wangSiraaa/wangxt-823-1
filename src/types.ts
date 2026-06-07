@@ -1,4 +1,5 @@
 export type UserRole = 'counselor' | 'supervisor' | 'scheduler';
+export type ShiftStatus = 'normal' | 'abnormal' | 'resolved';
 
 export interface User {
   id: string;
@@ -38,6 +39,7 @@ export interface ShiftAssignment {
   shiftTypeId: string;
   hotlineId: string;
   counselorIds: string[];
+  status?: ShiftStatus;
 }
 
 export interface Qualification {
@@ -56,4 +58,10 @@ export interface ValidationError {
   requiredQualificationName?: string;
   counselorQualifications?: string[];
   shiftId?: string;
+}
+
+export interface UserPreferences {
+  selectedDate: string;
+  selectedHotlineId?: string;
+  viewMode: 'week' | 'day';
 }

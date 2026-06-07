@@ -1,9 +1,16 @@
 import { useApp } from '../context/AppContext';
 import { counselors, shiftTypes, hotlines, qualifications } from '../data/fixtures';
 import { checkNightShiftRequirement } from '../utils/validation';
+import type { ShiftStatus } from '../types';
+
+const statusConfig: Record<ShiftStatus, { label: string; color: string; bgColor: string; borderColor: string }> = {
+  normal: { label: '正常', color: 'text-green-700', bgColor: 'bg-green-100', borderColor: 'border-green-300' },
+  abnormal: { label: '异常', color: 'text-red-700', bgColor: 'bg-red-100', borderColor: 'border-red-300' },
+  resolved: { label: '已处理', color: 'text-blue-700', bgColor: 'bg-blue-100', borderColor: 'border-blue-300' },
+};
 
 export function ShiftDetailPanel() {
-  const { selectedAssignment, setSelectedAssignment, removeCounselorFromAssignment, canEditSchedule } = useApp();
+  const { selectedAssignment, setSelectedAssignment, removeCounselorFromAssignment, updateAssignmentStatus, canEditSchedule } = useApp();
 
   if (!selectedAssignment) {
     return (
@@ -21,6 +28,8 @@ export function ShiftDetailPanel() {
     selectedAssignment.counselorIds.includes(c.id)
   );
   const requiredQual = qualifications.find(q => q.id === hotline?.requiredQualification);
+  const status = selectedAssignment.status || 'normal';
+  const statusInfo = statusConfig[status];
   
   const nightShiftError = checkNightShiftRequirement(
     selectedAssignment.shiftTypeId,
@@ -30,6 +39,12 @@ export function ShiftDetailPanel() {
   const handleRemoveCounselor = (counselorId: string) => {
     if (canEditSchedule()) {
       removeCounselorFromAssignment(selectedAssignment.id, counselorId);
+    }
+  };
+
+  const handleStatusChange = (newStatus: ShiftStatus) => {
+    if (canEditSchedule()) {
+      updateAssignmentStatus(selectedAssignment.id, newStatus);
     }
   };
 
@@ -51,9 +66,35 @@ export function ShiftDetailPanel() {
             ✕
           </button>
         </div>
+        <div className="mt-3">
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusInfo.bgColor} ${statusInfo.color}`}>
+            状态：{statusInfo.label}
+          </span>
+        </div>
       </div>
 
       <div className="p-6 space-y-6">
+        {canEditSchedule() && (
+          <div>
+            <h4 className="font-bold text-gray-700 mb-3">🔄 状态管理</h4>
+            <div className="flex gap-2">
+              {(['normal', 'abnormal', 'resolved'] as ShiftStatus[]).map(s => (
+                <button
+                  key={s}
+                  onClick={() => handleStatusChange(s)}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                    status === s
+                      ? `${statusConfig[s].bgColor} ${statusConfig[s].color} ${statusConfig[s].borderColor} border-2`
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-transparent'
+                  }`}
+                >
+                  {statusConfig[s].label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div>
           <h4 className="font-bold text-gray-700 mb-3">⏰ 班次时间</h4>
           <div className="bg-gray-50 rounded-xl p-4">
@@ -93,6 +134,9 @@ export function ShiftDetailPanel() {
               <p className="text-red-700 text-sm font-medium">
                 ⚠️ {nightShiftError.message}
               </p>
+              {nightShiftError.detail && (
+                <p className="text-red-600 text-xs mt-1">{nightShiftError.detail}</p>
+              )}
             </div>
           )}
 
@@ -105,6 +149,9 @@ export function ShiftDetailPanel() {
             ) : (
               assignedCounselors.map(counselor => {
                 const hasRequiredQual = counselor.qualifications.includes(hotline?.requiredQualification || '');
+                const counselorQualNames = counselor.qualifications
+                  .map(qId => qualifications.find(q => q.id === qId)?.name)
+                  .filter(Boolean);
                 return (
                   <div
                     key={counselor.id}
@@ -118,8 +165,15 @@ export function ShiftDetailPanel() {
                       <span className="text-2xl">{counselor.avatar}</span>
                       <div>
                         <p className="font-medium text-gray-800">{counselor.name}</p>
-                        {!hasRequiredQual && (
-                          <p className="text-xs text-red-600">⚠️ 资质不匹配</p>
+                        {!hasRequiredQual ? (
+                          <div>
+                            <p className="text-xs text-red-600 font-medium">⚠️ 资质不匹配</p>
+                            <p className="text-xs text-red-500">
+                              需要：{requiredQual?.name} | 现有：{counselorQualNames.join('、') || '无'}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-green-600">✓ 资质符合</p>
                         )}
                       </div>
                     </div>
